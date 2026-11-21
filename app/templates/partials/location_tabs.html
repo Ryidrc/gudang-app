@@ -1,0 +1,8 @@
+{% if user() and user()|has_perm('warehouse.manage') %}
+<nav class="tabs">
+  <a class="tab {% if active == 'gudangs' %}active{% endif %}" href="/manage/gudangs">{{ _("manage.gudangs") }}</a>
+  <a class="tab {% if active == 'areas' %}active{% endif %}" href="/manage/areas">{{ _("manage.areas") }}</a>
+  <a class="tab {% if active == 'raks' %}active{% endif %}" href="/manage/raks">{{ _("manage.raks") }}</a>
+  <a class="tab {% if active == 'skus' %}active{% endif %}" href="/manage/skus">{{ _("manage.skus") }}</a>
+</nav>
+{% endif %}

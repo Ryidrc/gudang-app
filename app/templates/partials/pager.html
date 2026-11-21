@@ -1,0 +1,11 @@
+{% if pg and pg.pages > 1 %}
+<nav class="pager">
+  {% if pg.page > 1 %}
+  <a class="btn btn-outline btn-sm" href="{{ request.url.include_query_params(page=pg.page - 1) }}">{{ _("common.prev") }}</a>
+  {% endif %}
+  <span class="pager-info">{{ _("common.page") }} {{ pg.page }} / {{ pg.pages }} &middot; {{ pg.total }} {{ _("common.rows") }}</span>
+  {% if pg.page < pg.pages %}
+  <a class="btn btn-outline btn-sm" href="{{ request.url.include_query_params(page=pg.page + 1) }}">{{ _("common.next") }}</a>
+  {% endif %}
+</nav>
+{% endif %}

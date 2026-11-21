@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>{{ _("profile.title") }}</h2>
+  <p><strong>{{ user().username }}</strong> · {{ _("role." ~ user().role) }}</p>
+  {% if msg %}<div class="alert {% if msg_bad %}alert-danger{% else %}alert-success{% endif %}">{{ msg }}</div>{% endif %}
+  <form method="post" action="/profile/password" class="narrow-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("profile.current_pw") }}
+      <input type="password" name="current_password" required autocomplete="current-password">
+    </label>
+    <label class="field">{{ _("profile.new_pw") }}
+      <input type="password" name="new_password" required minlength="8" autocomplete="new-password">
+    </label>
+    <label class="field">{{ _("profile.confirm_pw") }}
+      <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+    </label>
+    <button class="btn btn-primary" type="submit">{{ _("profile.change_pw") }}</button>
+  </form>
+</div>
+{% endblock %}

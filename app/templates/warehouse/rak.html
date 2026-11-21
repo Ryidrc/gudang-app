@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block breadcrumbs %}{% for url, label in crumbs %}<a href="{{ url }}">{{ label }}</a>{% if not loop.last %} / {% endif %}{% endfor %}{% endblock %}
+{% block content %}
+{% if msg %}<div class="alert {% if 'error' in msg %}alert-danger{% else %}alert-success{% endif %}">{{ _(msg) }}</div>{% endif %}
+<h2>{{ g.name }} / {{ a.name }} / {{ r.name }}</h2>
+{% if user()|has_perm('warehouse.manage') %}
+<div class="page-actions"><a class="btn" href="/w/rak/{{ r.id }}/qr-page">🔳 {{ _("qr.open") }}</a></div>
+{% endif %}
+<table class="table">
+  <thead><tr><th>{{ _("manage.code") }}</th><th>{{ _("manage.sku") }}</th><th>{{ _("w.boxes") }}</th></tr></thead>
+  <tbody>
+  {% for s in stocks %}
+    <tr><td>{{ skus[s.sku_id].code }}</td><td>{{ skus[s.sku_id].name }}</td><td>{{ s.qty_boxes }}</td></tr>
+  {% else %}
+    <tr><td colspan="3">{{ _("w.rak.empty") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if user()|has_perm('warehouse.manage') or user()|has_perm('warehouse.record') %}
+<div class="card" style="margin-top:1.5rem;">
+  <h3>{{ _("stock.panel.title") }}</h3>
+  <form method="post" action="{% if user()|has_perm('warehouse.manage') %}/manage/stock/execute{% else %}/w/stock/request{% endif %}" class="form-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("common.type") }}
+      <select name="type">
+        <option value="in">{{ _("stock.masuk") }}</option>
+        <option value="move">{{ _("stock.pindah") }}</option>
+        <option value="adjust">{{ _("stock.adjust") }}</option>
+        <option value="out">{{ _("stock.keluar") }}</option>
+      </select>
+    </label>
+    <label class="field">{{ _("manage.sku") }}
+      <select name="sku_id">{% for s in skus_active %}<option value="{{ s.id }}">{{ s.code }} — {{ s.name }}</option>{% endfor %}</select>
+    </label>
+    <label class="field">{{ _("stock.from_rak") }}
+      <select name="from_rak_id"><option value="0">—</option>{% for rk in raks_active %}<option value="{{ rk.id }}" {% if rk.id == r.id %}selected{% endif %}>{{ rk.label }}</option>{% endfor %}</select>
+    </label>
+    <label class="field">{{ _("stock.to_rak") }}
+      <select name="to_rak_id"><option value="0">—</option>{% for rk in raks_active %}<option value="{{ rk.id }}" {% if rk.id == r.id %}selected{% endif %}>{{ rk.label }}</option>{% endfor %}</select>
+    </label>
+    <label class="field">{{ _("stock.qty") }}<input type="number" name="qty" min="0" value="1" required></label>
+    <label class="field">{{ _("common.reason") }}<input name="reason" placeholder="{{ _('stock.reason.placeholder') }}"></label>
+    <button class="btn btn-primary" type="submit">
+      {% if user()|has_perm('warehouse.manage') %}{{ _("stock.submit_direct") }}{% else %}{{ _("stock.submit_request") }}{% endif %}
+    </button>
+  </form>
+  <p style="margin-top:.75rem;"><a href="/w/requests">{{ _("stock.link_requests") }}</a></p>
+</div>
+{% endif %}
+{% endblock %}

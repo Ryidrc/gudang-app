@@ -1,0 +1,13 @@
+# Bootstrap config only. Runtime settings live in the DB (admin.settings).
+# config.toml is auto-generated on first start with a random secret_key.
+# NEVER commit config.toml.
+
+[server]
+host = "0.0.0.0"
+port = 8000
+
+[security]
+cookie_secure = false   # false on LAN HTTP; true only behind HTTPS
+
+[secrets]
+secret_key = ""         # filled automatically on first start

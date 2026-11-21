@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block breadcrumbs %}<a href="/w">{{ _("w.home") }}</a>{% endblock %}
+{% block content %}
+<h2>{{ _("w.home") }}</h2>
+<div class="card-grid">
+  {% for row in rows %}
+  <a class="loc-card" href="/w/gudang/{{ row.g.id }}">
+    <div class="title">🏢 {{ row.g.name }}</div>
+    <div class="chips">
+      <span class="chip">{{ row.areas }} {{ _("w.areas") }}</span>
+      <span class="chip">{{ row.raks }} {{ _("w.raks") }}</span>
+      <span class="chip chip-box {% if row.boxes < 10 %}stock-low{% elif row.boxes < 50 %}stock-med{% else %}stock-high{% endif %}">{{ row.boxes }} {{ _("w.boxes") }}</span>
+    </div>
+  </a>
+  {% else %}
+  <div class="card">
+    <p>{{ _("w.empty") }}</p>
+    {% if user()|has_perm('warehouse.manage') %}
+    <a href="/manage/gudangs" class="btn btn-primary" style="margin-top:.5rem;display:inline-block;">{{ _("w.create_first") }}</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

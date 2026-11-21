@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("import.preview_title") }}</h2>
+<div class="stat-grid" style="margin-bottom:1rem;">
+  <div class="stat-card stat-cyan"><div class="num">{{ preview.valid|length }}</div><div class="label">{{ _("import.valid_count") }}</div></div>
+  <div class="stat-card stat-yellow"><div class="num">{{ preview.skipped|length }}</div><div class="label">{{ _("import.skipped_count") }}</div></div>
+  <div class="stat-card stat-red"><div class="num">{{ preview.invalid|length }}</div><div class="label">{{ _("import.invalid_count") }}</div></div>
+</div>
+
+{% if preview.valid %}
+<h3>{{ _("import.valid_title") }}</h3>
+<table class="table">
+  <thead><tr><th>#</th><th>{{ _("import.column.code") }}</th><th>{{ _("import.column.name") }}</th><th>{{ _("import.column.description") }}</th></tr></thead>
+  <tbody>{% for r in preview.valid %}<tr><td>{{ r.row_num }}</td><td>{{ r.code }}</td><td>{{ r.name }}</td><td>{{ r.description or '—' }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+{% if preview.skipped %}
+<h3>{{ _("import.skipped_title") }}</h3>
+<table class="table">
+  <thead><tr><th>#</th><th>{{ _("import.column.code") }}</th><th>{{ _("import.column.name") }}</th><th>{{ _("common.reason") }}</th></tr></thead>
+  <tbody>{% for r in preview.skipped %}<tr><td>{{ r.row_num }}</td><td>{{ r.code }}</td><td>{{ r.name }}</td><td>{{ r.error }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+{% if preview.invalid %}
+<h3>{{ _("import.invalid_title") }}</h3>
+<table class="table">
+  <thead><tr><th>#</th><th>{{ _("import.column.code") }}</th><th>{{ _("import.column.name") }}</th><th>{{ _("common.reason") }}</th></tr></thead>
+  <tbody>{% for r in preview.invalid %}<tr><td>{{ r.row_num }}</td><td>{{ r.code }}</td><td>{{ r.name }}</td><td>{{ r.error }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+{% if preview.valid and import_token %}
+<form method="post" action="/manage/skus/import-confirm" style="margin-top:1rem;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="import_token" value="{{ import_token }}">
+  <button class="btn btn-primary" type="submit">{{ _("import.confirm") }}</button>
+  <a href="/manage/skus/import" class="btn" style="margin-left:.5rem;">{{ _("common.cancel") }}</a>
+</form>
+{% else %}
+<div class="alert alert-warning">{{ _("import.nothing_to_import") }}</div>
+<a href="/manage/skus/import" class="btn">{{ _("import.try_again") }}</a>
+{% endif %}
+{% endblock %}

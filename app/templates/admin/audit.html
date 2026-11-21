@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("nav.audit") }}</h2>
+<div class="page-actions"><a class="btn btn-outline" href="{{ request.url.include_query_params(export='xlsx') }}">⬇️ {{ _("common.export") }}</a></div>
+<table class="table">
+  <thead><tr><th>{{ _("audit.time") }}</th><th>{{ _("common.user") }}</th><th>{{ _("audit.action") }}</th><th>{{ _("common.entity") }}</th><th>IP</th><th>{{ _("audit.details") }}</th></tr></thead>
+  <tbody>
+  {% for log in logs %}
+    <tr>
+      <td>{{ log.created_at | datetimeformat }}</td>
+      <td>{{ users.get(log.user_id, 'System') }}</td>
+      <td>{{ log.action }}</td>
+      <td>{{ log.entity_type }} #{{ log.entity_id or '-' }}</td>
+      <td>{{ log.ip or '-' }}</td>
+      <td><small>{{ log.after_json or log.before_json or '-' }}</small></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">{{ _("w.empty") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "partials/pager.html" %}
+{% endblock %}

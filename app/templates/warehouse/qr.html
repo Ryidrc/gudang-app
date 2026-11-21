@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>QR Code: {{ g.name }} / {{ a.name }} / {{ r.name }}</h2>
+<div class="card" style="text-align: center; max-width: 400px; margin: 0 auto;">
+  <img src="/w/rak/{{ r.id }}/qr" alt="QR Code" style="max-width: 100%; height: auto; margin-bottom: 1rem;">
+  <p style="font-weight: 600; font-size: 1.1rem;">{{ r.name }}</p>
+  <p style="color: var(--muted); font-size: 0.9rem;">{{ g.name }} / {{ a.name }}</p>
+  <button class="btn btn-primary" onclick="window.print()">{{ _("common.print") }}</button>
+</div>
+{% endblock %}

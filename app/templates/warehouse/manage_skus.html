@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active = "skus" %}
+<h2>{{ _("manage.skus") }}</h2>
+{% include "partials/location_tabs.html" %}
+<div class="page-actions">
+  <a class="btn btn-outline" href="/manage/skus/import">📥 {{ _("import.title") }}</a>
+  <a class="btn btn-outline" href="?export=xlsx">⬇️ {{ _("common.export") }}</a>
+</div>
+{% if msg %}<div class="alert alert-success">{{ _(msg) }}</div>{% endif %}
+<div class="card">
+  <form method="post" action="/manage/skus" class="form-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("manage.code") }}<input name="code" required></label>
+    <label class="field">{{ _("manage.name") }}<input name="name" required></label>
+    <label class="field">{{ _("manage.description") }}<input name="description"></label>
+    <button class="btn btn-primary" type="submit">{{ _("manage.create") }}</button>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>{{ _("manage.code") }}</th><th>{{ _("manage.name") }}</th><th>{{ _("users.active") }}</th><th>{{ _("common.actions") }}</th></tr></thead>
+  <tbody>
+  {% for s in items %}
+  <tr>
+    <td>{{ s.code }}</td>
+    <td>{{ s.name }} {% if not s.is_active %}<span class="badge badge-arsip">{{ _("manage.archived") }}</span>{% endif %}</td>
+    <td>{{ "✓" if s.is_active else "—" }}</td>
+    <td>
+      <details class="row-actions"><summary>{{ _("users.edit") }}</summary>
+        <form method="post" action="/manage/skus/{{ s.id }}/update" class="form-row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field">{{ _("manage.code") }}<input value="{{ s.code }}" readonly></label>
+          <label class="field">{{ _("manage.name") }}<input name="name" value="{{ s.name }}"></label>
+          <label class="field">{{ _("manage.description") }}<input name="description" value="{{ s.description or '' }}"></label>
+          <button class="btn" type="submit">{{ _("common.save") }}</button>
+        </form>
+        <form method="post" action="/manage/skus/{{ s.id }}/active" class="form-row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="is_active" value="{{ '' if s.is_active else 'on' }}">
+          {% if s.is_active %}
+          <button class="btn btn-warning" type="submit">{{ _("manage.archive") }}</button>
+          {% else %}
+          <button class="btn btn-primary" type="submit">{{ _("manage.reactivate") }}</button>
+          {% endif %}
+        </form>
+      </details>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "partials/pager.html" %}
+{% endblock %}

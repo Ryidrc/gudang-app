@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("nav.dashboard") }}</h2>
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+  <div class="stat-card stat-blue">
+    <div class="num">{{ active_skus }}</div>
+    <div class="label">{{ _("dashboard.active_skus") }}</div>
+  </div>
+  <div class="stat-card stat-cyan">
+    <div class="num">{{ total_boxes }}</div>
+    <div class="label">{{ _("dashboard.total_boxes") }}</div>
+  </div>
+  <div class="stat-card stat-yellow">
+    <div class="num">{{ pending_reqs }}</div>
+    <div class="label">{{ _("dashboard.pending_reqs") }}</div>
+  </div>
+  <div class="stat-card stat-red">
+    <div class="num">{{ failed_24h }}</div>
+    <div class="label">{{ _("dashboard.failed_24h") }}</div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<h3 style="margin-top: 2rem; margin-bottom: 1rem;">{{ _("dashboard.quick_actions") }}</h3>
+<div class="card-grid">
+  {% if user()|has_perm('warehouse.manage') %}
+  <a href="/manage/gudangs" class="loc-card">
+    <div class="title">🏢 {{ _("dashboard.action.gudang") }}</div>
+    <div class="meta">{{ _("dashboard.action.gudang_desc") }}</div>
+  </a>
+  <a href="/manage/skus" class="loc-card">
+    <div class="title">📦 {{ _("dashboard.action.sku") }}</div>
+    <div class="meta">{{ _("dashboard.action.sku_desc") }}</div>
+  </a>
+  {% endif %}
+
+  {% if user()|has_perm('warehouse.view') %}
+  <a href="/w/search" class="loc-card">
+    <div class="title">🔍 {{ _("dashboard.action.search") }}</div>
+    <div class="meta">{{ _("dashboard.action.search_desc") }}</div>
+  </a>
+  <a href="/w/requests" class="loc-card">
+    <div class="title">📋 {{ _("dashboard.action.requests") }}</div>
+    <div class="meta">{{ _("dashboard.action.requests_desc") }}</div>
+  </a>
+  {% endif %}
+
+  {% if user()|has_perm('admin.users') %}
+  <a href="/admin/users" class="loc-card">
+    <div class="title">👥 {{ _("dashboard.action.users") }}</div>
+    <div class="meta">{{ _("dashboard.action.users_desc") }}</div>
+  </a>
+  {% endif %}
+</div>
+{% if pending_reqs and user() and user().role in ('owner', 'manager') %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    showToast({{ _("dashboard.pending_toast", count=pending_reqs)|tojson }}, "warning");
+  });
+</script>
+{% endif %}
+{% endblock %}

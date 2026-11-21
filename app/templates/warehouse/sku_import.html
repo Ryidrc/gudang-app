@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("import.title") }}</h2>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="card">
+  <p>{{ _("import.instructions") }}</p>
+  <p><a class="btn btn-outline" href="/manage/skus/import-template">⬇️ {{ _("import.template_download") }}</a></p>
+  <form method="post" action="/manage/skus/import-preview" enctype="multipart/form-data" class="form-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("import.file") }}
+      <input type="file" name="file" accept=".xlsx,.csv" required>
+    </label>
+    <button class="btn btn-primary" type="submit">{{ _("import.preview") }}</button>
+    <a class="btn" href="/manage/skus">{{ _("common.cancel") }}</a>
+  </form>
+</div>
+{% endblock %}

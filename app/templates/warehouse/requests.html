@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("request.title") }}</h2>
+{% if msg %}<div class="alert {% if 'error' in msg %}alert-danger{% else %}alert-success{% endif %}">{{ _(msg) }}</div>{% endif %}
+<div class="page-actions"><a class="btn btn-outline" href="?export=xlsx">⬇️ {{ _("common.export") }}</a></div>
+<table class="table">
+  <thead><tr>
+    <th>{{ _("common.type") }}</th><th>SKU</th><th>{{ _("stock.from_rak") }}</th><th>{{ _("stock.to_rak") }}</th>
+    <th>{{ _("stock.qty") }}</th><th>{{ _("common.reason") }}</th><th>{{ _("common.status") }}</th><th>{{ _("common.actions") }}</th>
+  </tr></thead>
+  <tbody>
+  {% for req in reqs %}
+    <tr>
+      <td>{{ _("stock." ~ req.type) }}</td>
+      <td>{{ skus.get(req.sku_id).code if skus.get(req.sku_id) else '???' }}</td>
+      <td>{{ raks.get(req.from_rak_id).name if req.from_rak_id and raks.get(req.from_rak_id) else '—' }}</td>
+      <td>{{ raks.get(req.to_rak_id).name if req.to_rak_id and raks.get(req.to_rak_id) else '—' }}</td>
+      <td>{{ req.qty }}</td>
+      <td>{{ req.reason or '—' }}</td>
+      <td>
+        {% if req.status == 'pending' %}<span class="badge" style="background:#f9b115">{{ _("request.pending") }}</span>
+        {% elif req.status == 'approved' %}<span class="badge" style="background:#2eb85c">{{ _("request.approved_status") }}</span>
+        {% else %}<span class="badge" style="background:#e55353">{{ _("request.rejected_status") }}</span>{% endif %}
+      </td>
+      <td>
+        {% if req.status == 'pending' and user()|has_perm('warehouse.approve') %}
+        <form method="post" action="/w/requests/{{ req.id }}/approve" class="form-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary" type="submit">{{ _("common.approve") }}</button>
+        </form>
+        <form method="post" action="/w/requests/{{ req.id }}/reject" class="form-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field" style="display:inline"><input name="review_note" placeholder="{{ _('request.review_note') }}"></label>
+          <button class="btn btn-danger" type="submit">{{ _("common.reject") }}</button>
+        </form>
+        {% else %}
+        <small>{{ req.review_note or '—' }}</small>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">{{ _("w.empty") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "partials/pager.html" %}
+{% endblock %}

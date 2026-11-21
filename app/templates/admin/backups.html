@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("nav.backups") }}</h2>
+{% if msg %}<div class="alert {% if 'failed' in msg %}alert-danger{% else %}alert-success{% endif %}">{{ _(msg) }}</div>{% endif %}
+<div class="card">
+  <form method="post" action="/admin/backups/run" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-primary" type="submit">{{ _("backup.run_now") }}</button>
+  </form>
+  <p style="margin-top:1rem; color: var(--muted); font-size: 0.9rem;">{{ _("backup.restore_note") }}</p>
+</div>
+<table class="table">
+  <thead><tr><th>{{ _("backup.filename") }}</th><th>{{ _("backup.size") }}</th><th>{{ _("backup.date") }}</th></tr></thead>
+  <tbody>
+  {% for f in files %}
+    <tr>
+      <td>{{ f.name }}</td>
+      <td>{{ (f.size / 1024) | round(1) }} KB</td>
+      <td>{{ f.mtime | datetimeformat }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="3">{{ _("w.empty") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

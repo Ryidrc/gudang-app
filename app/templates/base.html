@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ _("app.name") }}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      function cookie(name) {
+        var m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+        return m ? decodeURIComponent(m.pop()) : "";
+      }
+      document.body.addEventListener("htmx:configRequest", function (e) {
+        e.detail.headers["X-CSRF-Token"] = cookie("csrf");
+      });
+      document.body.addEventListener("htmx:afterSwap", function (e) {
+        var toast = e.detail.xhr.getResponseHeader("X-Toast");
+        if (toast) {
+          try {
+            var data = JSON.parse(toast);
+            showToast(data.message, data.type || "success");
+          } catch (err) {}
+        }
+      });
+    });
+    function showToast(message, type) {
+      var container = document.getElementById("toast-container");
+      if (!container) return;
+      var toast = document.createElement("div");
+      toast.className = "toast " + type;
+      toast.innerHTML = "<span>" + message + "</span><button class='toast-close' onclick='this.parentElement.remove()'>&times;</button>";
+      container.appendChild(toast);
+      setTimeout(function () {
+        toast.style.animation = "fadeOut 0.3s ease-in forwards";
+        setTimeout(function () { toast.remove(); }, 300);
+      }, 4000);
+    }
+    function openModal(id) {
+      document.getElementById(id).classList.add("active");
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("active");
+    }
+  </script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">{{ _("app.name") }}</div>
+    <nav class="sidebar-nav">
+      <a class="nav-link" href="/">{{ _("nav.dashboard") }}</a>
+      {% if user() and user()|has_perm('warehouse.view') %}
+      <a class="nav-link" href="/w">{{ _("nav.warehouse") }}</a>
+      <a class="nav-link" href="/w/requests">
+        {{ _("nav.requests") }}
+        {% if request.state.pending_requests > 0 %}
+        <span class="nav-badge">{{ request.state.pending_requests }}</span>
+        {% endif %}
+      </a>
+      {% endif %}
+      {% if user() and (user()|has_perm('admin.users') or user()|has_perm('admin.audit') or user()|has_perm('admin.settings') or user()|has_perm('admin.backup')) %}
+      <span class="nav-section">{{ _("nav.admin") }}</span>
+      {% if user()|has_perm('admin.users') %}<a class="nav-link sub" href="/admin/users">{{ _("nav.users") }}</a>{% endif %}
+      {% if user()|has_perm('admin.settings') %}<a class="nav-link sub" href="/admin/settings">{{ _("nav.settings") }}</a>{% endif %}
+      {% if user()|has_perm('admin.audit') %}<a class="nav-link sub" href="/admin/audit">{{ _("nav.audit") }}</a>{% endif %}
+      {% if user()|has_perm('admin.backup') %}<a class="nav-link sub" href="/admin/backups">{{ _("nav.backups") }}</a>{% endif %}
+      {% endif %}
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="sidebar-toggler" aria-label="menu"
+              onclick="document.body.classList.toggle('sidebar-open')">&#9776;</button>
+      <nav class="breadcrumbs">{% block breadcrumbs %}{% endblock %}</nav>
+      <div class="topbar-right">
+        {% if user() and user()|has_perm('warehouse.view') %}
+        <form method="get" action="/w/search" class="topbar-search">
+          <input type="search" name="q" placeholder="{{ _('search.placeholder') }}" aria-label="search">
+        </form>
+        {% endif %}
+        <a class="locale-link" href="/locale/set?loc=id&next={{ request.url.path }}">ID</a>
+        <a class="locale-link" href="/locale/set?loc=en&next={{ request.url.path }}">EN</a>
+        {% if user() %}
+        <span class="badge badge-role">{{ user().display_name }}</span>
+        <a href="/profile">{{ _("nav.profile") }}</a>
+        <form method="post" action="/logout" class="form-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-link" type="submit">{{ _("nav.logout") }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </header>
+    <main class="content">
+      {% block content %}
+      <div class="card"><p>{{ _("scaffold.ok") }}</p></div>
+      {% endblock %}
+    </main>
+  </div>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal('modal-overlay')">
+    <div class="modal" onclick="event.stopPropagation()">
+      {% block modal_content %}{% endblock %}
+    </div>
+  </div>
+</body>
+</html>

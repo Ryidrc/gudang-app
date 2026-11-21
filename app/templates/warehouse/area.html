@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block breadcrumbs %}{% for url, label in crumbs %}<a href="{{ url }}">{{ label }}</a>{% if not loop.last %} / {% endif %}{% endfor %}{% endblock %}
+{% block content %}
+<h2>{{ g.name }} / {{ a.name }}</h2>
+{% if user()|has_perm('warehouse.manage') %}
+<div class="page-actions">
+  <a class="btn btn-primary" href="/manage/raks?area_id={{ a.id }}">＋ {{ _("manage.add_rak") }}</a>
+  <a class="btn" href="/w/area/{{ a.id }}/qr-sheet">🖨️ {{ _("qr.sheet_title") }}</a>
+</div>
+{% endif %}
+<div class="rak-grid {{ a.layout }}">
+  {% for r in raks %}
+  <a class="loc-card" href="/w/rak/{{ r.id }}">
+    <div class="title">{{ r.name }}</div>
+    <div class="meta">{{ counts[r.id] }} {{ _("w.boxes") }}</div>
+  </a>
+  {% else %}
+  <div class="card"><p>{{ _("w.empty") }}</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

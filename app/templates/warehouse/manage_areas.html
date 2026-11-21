@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active = "areas" %}
+<h2>{{ _("manage.areas") }}</h2>
+{% include "partials/location_tabs.html" %}
+<div class="page-actions"><a class="btn btn-outline" href="?export=xlsx">⬇️ {{ _("common.export") }}</a></div>
+{% if msg %}<div class="alert alert-success">{{ _(msg) }}</div>{% endif %}
+<div class="card">
+  <form method="post" action="/manage/areas" class="form-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("manage.gudang") }}
+      <select name="gudang_id">{% for g in gudangs %}<option value="{{ g.id }}" {% if sel_gudang == g.id %}selected{% endif %}>{{ g.name }}</option>{% endfor %}</select>
+    </label>
+    <label class="field">{{ _("manage.name") }}<input name="name" required></label>
+    <label class="field">{{ _("manage.sort_order") }}<input type="number" name="sort_order" value="0"></label>
+    <button class="btn btn-primary" type="submit">{{ _("manage.create") }}</button>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>{{ _("manage.gudang") }}</th><th>{{ _("manage.name") }}</th><th>{{ _("manage.sort_order") }}</th><th>{{ _("users.active") }}</th><th>{{ _("common.actions") }}</th></tr></thead>
+  <tbody>
+  {% for a in items %}
+  <tr>
+    <td>{{ gmap[a.gudang_id] }}</td>
+    <td>{{ a.name }} {% if not a.is_active %}<span class="badge badge-arsip">{{ _("manage.archived") }}</span>{% endif %}</td>
+    <td>{{ a.sort_order }}</td>
+    <td>{{ "✓" if a.is_active else "—" }}</td>
+    <td>
+      <details class="row-actions"><summary>{{ _("users.edit") }}</summary>
+        <form method="post" action="/manage/areas/{{ a.id }}/update" class="form-row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field">{{ _("manage.name") }}<input name="name" value="{{ a.name }}"></label>
+          <label class="field">{{ _("manage.sort_order") }}<input type="number" name="sort_order" value="{{ a.sort_order }}"></label>
+          <button class="btn" type="submit">{{ _("common.save") }}</button>
+        </form>
+        <form method="post" action="/manage/areas/{{ a.id }}/active" class="form-row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="is_active" value="{{ '' if a.is_active else 'on' }}">
+          {% if a.is_active %}
+          <button class="btn btn-warning" type="submit">{{ _("manage.archive") }}</button>
+          {% else %}
+          <button class="btn btn-primary" type="submit">{{ _("manage.reactivate") }}</button>
+          {% endif %}
+        </form>
+      </details>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "partials/pager.html" %}
+{% endblock %}

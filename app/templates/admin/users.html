@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("users.title") }}</h2>
+<div class="page-actions"><a class="btn btn-outline" href="{{ request.url.include_query_params(export='xlsx') }}">⬇️ {{ _("common.export") }}</a></div>
+{% if msg %}<div class="alert alert-success">{{ _(msg) }}</div>{% endif %}
+
+<div class="card">
+  <h3>{{ _("users.create") }}</h3>
+  <form method="post" action="/admin/users" class="form-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("users.username") }}<input name="username" required></label>
+    <label class="field">{{ _("users.display_name") }}<input name="display_name" required></label>
+    <label class="field">{{ _("users.password") }}<input type="password" name="password" required minlength="8"></label>
+    <label class="field">{{ _("users.role") }}
+      <select name="role">
+        {% for r in creatable %}<option value="{{ r }}">{{ _("role." ~ r) }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field checkbox">{{ _("users.can_record") }}<input type="checkbox" name="can_record"></label>
+    <button class="btn btn-primary" type="submit">{{ _("users.save") }}</button>
+  </form>
+</div>
+
+<table class="table">
+  <thead><tr>
+    <th>{{ _("users.username") }}</th><th>{{ _("users.display_name") }}</th>
+    <th>{{ _("users.role") }}</th><th>{{ _("users.can_record") }}</th>
+    <th>{{ _("users.active") }}</th><th>{{ _("common.actions") }}</th>
+  </tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td>{{ u.display_name }}</td>
+      <td><span class="badge badge-role">{{ _("role." ~ u.role) }}</span></td>
+      <td>{{ "✓" if u.can_record else "—" }}</td>
+      <td>{{ "✓" if u.is_active else "—" }}</td>
+      <td>
+        {% if user() and user().id != u.id %}
+        <details class="row-actions">
+          <summary>{{ _("users.edit") }}</summary>
+          <form method="post" action="/admin/users/{{ u.id }}/update" class="form-row">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="field">{{ _("users.display_name") }}<input name="display_name" value="{{ u.display_name }}"></label>
+            <label class="field">{{ _("users.role") }}
+              <select name="role">
+                {% for r in creatable %}<option value="{{ r }}" {% if r == u.role %}selected{% endif %}>{{ _("role." ~ r) }}</option>{% endfor %}
+              </select>
+            </label>
+            {% if u.role == 'staff' %}
+            <label class="field checkbox">{{ _("users.can_record") }}<input type="checkbox" name="can_record" {% if u.can_record %}checked{% endif %}></label>
+            {% endif %}
+            <label class="field checkbox">{{ _("users.active") }}<input type="checkbox" name="is_active" {% if u.is_active %}checked{% endif %}></label>
+            <button class="btn" type="submit">{{ _("users.save") }}</button>
+          </form>
+          <form method="post" action="/admin/users/{{ u.id }}/reset-password" class="form-row">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="field">{{ _("users.new_password") }}<input type="password" name="new_password" required minlength="8"></label>
+            <button class="btn btn-warning" type="submit">{{ _("users.reset_pw") }}</button>
+          </form>
+          <form method="post" action="/admin/users/{{ u.id }}/revoke-sessions" class="form-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger" type="submit">{{ _("users.revoke") }}</button>
+          </form>
+        </details>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "partials/pager.html" %}
+{% endblock %}

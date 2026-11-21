@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block breadcrumbs %}{% for url, label in crumbs %}<a href="{{ url }}">{{ label }}</a>{% if not loop.last %} / {% endif %}{% endfor %}{% endblock %}
+{% block content %}
+<h2>{{ g.name }}</h2>
+{% if user()|has_perm('warehouse.manage') %}
+<div class="page-actions"><a class="btn btn-primary" href="/manage/areas?gudang_id={{ g.id }}">＋ {{ _("manage.add_area") }}</a></div>
+{% endif %}
+<div class="card-grid">
+  {% for a in areas %}
+  <a class="loc-card" href="/w/area/{{ a.id }}">
+    <div class="title">{{ a.name }}</div>
+  </a>
+  {% else %}
+  <div class="card"><p>{{ _("w.empty") }}</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

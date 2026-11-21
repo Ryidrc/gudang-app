@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("search.title") }}</h2>
+<form method="get" action="/w/search" class="form-row" style="margin-bottom: 1.5rem;">
+  <label class="field" style="flex: 1;">
+    <input type="text" name="q" value="{{ q }}" placeholder="{{ _("search.placeholder") }}" autofocus>
+  </label>
+  <button class="btn btn-primary" type="submit">{{ _("search.submit") }}</button>
+  <a class="btn btn-outline" href="{{ request.url.include_query_params(export='xlsx') }}">⬇️ {{ _("common.export") }}</a>
+</form>
+
+{% if q %}
+  {% if results %}
+  <table class="table">
+    <thead><tr><th>SKU</th><th>{{ _("manage.name") }}</th><th>{{ _("w.home") }}</th><th>{{ _("stock.qty") }}</th><th>{{ _("common.actions") }}</th></tr></thead>
+    <tbody>
+    {% for res in results %}
+      <tr>
+        <td>{{ res.sku.code }}</td>
+        <td>{{ res.sku.name }}</td>
+        <td>{{ res.gudang }} / {{ res.area }} / {{ res.rak }}</td>
+        <td>{{ res.qty }}</td>
+        <td><a class="btn" href="/w/rak/{{ res.rak_id }}">{{ _("common.view") }}</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="card"><p>{{ _("search.no_results") }}</p></div>
+  {% endif %}
+{% endif %}
+{% include "partials/pager.html" %}
+{% endblock %}

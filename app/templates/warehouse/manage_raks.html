@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active = "raks" %}
+<h2>{{ _("manage.raks") }}</h2>
+{% include "partials/location_tabs.html" %}
+<div class="page-actions"><a class="btn btn-outline" href="?export=xlsx">⬇️ {{ _("common.export") }}</a></div>
+{% if msg %}<div class="alert alert-success">{{ _(msg) }}</div>{% endif %}
+<div class="card">
+  <form method="post" action="/manage/raks" class="form-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("manage.area") }}
+      <select name="area_id">{% for a in areas %}<option value="{{ a.id }}" {% if sel_area == a.id %}selected{% endif %}>{{ gmap[a.gudang_id] }} / {{ a.name }}</option>{% endfor %}</select>
+    </label>
+    <label class="field">{{ _("manage.name") }}<input name="name" required></label>
+    <label class="field">{{ _("manage.sort_order") }}<input type="number" name="sort_order" value="0"></label>
+    <button class="btn btn-primary" type="submit">{{ _("manage.create") }}</button>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>{{ _("manage.area") }}</th><th>{{ _("manage.name") }}</th><th>{{ _("manage.sort_order") }}</th><th>{{ _("users.active") }}</th><th>{{ _("common.actions") }}</th></tr></thead>
+  <tbody>
+  {% for r in items %}
+  <tr>
+    <td>{{ amap[r.area_id] }}</td>
+    <td>{{ r.name }} {% if not r.is_active %}<span class="badge badge-arsip">{{ _("manage.archived") }}</span>{% endif %}</td>
+    <td>{{ r.sort_order }}</td>
+    <td>{{ "✓" if r.is_active else "—" }}</td>
+    <td>
+      <details class="row-actions"><summary>{{ _("users.edit") }}</summary>
+        <form method="post" action="/manage/raks/{{ r.id }}/update" class="form-row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field">{{ _("manage.name") }}<input name="name" value="{{ r.name }}"></label>
+          <label class="field">{{ _("manage.sort_order") }}<input type="number" name="sort_order" value="{{ r.sort_order }}"></label>
+          <button class="btn" type="submit">{{ _("common.save") }}</button>
+        </form>
+        <form method="post" action="/manage/raks/{{ r.id }}/active" class="form-row">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="is_active" value="{{ '' if r.is_active else 'on' }}">
+          {% if r.is_active %}
+          <button class="btn btn-warning" type="submit">{{ _("manage.archive") }}</button>
+          {% else %}
+          <button class="btn btn-primary" type="submit">{{ _("manage.reactivate") }}</button>
+          {% endif %}
+        </form>
+      </details>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "partials/pager.html" %}
+{% endblock %}

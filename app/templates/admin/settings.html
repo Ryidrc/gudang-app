@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ _("nav.settings") }}</h2>
+{% if msg %}<div class="alert alert-success">{{ _(msg) }}</div>{% endif %}
+<div class="card narrow-form">
+  <form method="post" action="/admin/settings">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">{{ _("settings.qr_base_url") }}
+      <input name="qr_base_url" value="{{ settings.get('qr_base_url', 'http://localhost:8000') }}" required>
+    </label>
+    <label class="field">{{ _("settings.backup_keep_days") }}
+      <input type="number" name="backup_keep_days" value="{{ settings.get('backup_keep_days', '7') }}" required>
+    </label>
+    <label class="field">{{ _("settings.backup_time") }}
+      <input type="time" name="backup_time" value="{{ settings.get('backup_time', '17:10') }}" required>
+    </label>
+    <button class="btn btn-primary" type="submit">{{ _("common.save") }}</button>
+  </form>
+</div>
+{% endblock %}
