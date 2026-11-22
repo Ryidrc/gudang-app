@@ -34,6 +34,10 @@
     <div class="title">📦 {{ _("dashboard.action.sku") }}</div>
     <div class="meta">{{ _("dashboard.action.sku_desc") }}</div>
   </a>
+  <a href="/manage/stock" class="loc-card">
+    <div class="title">📦 {{ _("dashboard.action.stock") }}</div>
+    <div class="meta">{{ _("dashboard.action.stock_desc") }}</div>
+  </a>
   {% endif %}
 
   {% if user()|has_perm('warehouse.view') %}

@@ -252,6 +252,81 @@ def execute_keluar(db: DbSession, actor, sku_id: int, rak_id: int, qty: int,
     if commit: db.commit()
 
 
+def batch_apply_stock(db: DbSession, actor, mode: str,
+                      entries: list[tuple[int, int, int]],
+                      reason: str | None) -> int:
+    """Apply stock changes for many (sku, rak) pairs in one transaction."""
+    if mode not in ("adjust", "in", "out"):
+        raise ValueError("invalid_type")
+    if mode == "out" and not (reason or "").strip():
+        raise ValueError("reason_required")
+
+    seen: set[tuple[int, int]] = set()
+    for sku_id, rak_id, _qty in entries:
+        pair = (sku_id, rak_id)
+        if pair in seen:
+            raise ValueError("batch_duplicate")
+        seen.add(pair)
+
+    for _sku_id, _rak_id, qty in entries:
+        if qty < 0:
+            raise ValueError("qty_cannot_be_negative")
+
+    sku_ids = {sku_id for sku_id, _rak_id, _qty in entries}
+    if sku_ids:
+        active_skus = set(db.scalars(
+            select(Sku.id).where(Sku.id.in_(sku_ids), Sku.is_active.is_(True))))
+        if active_skus != sku_ids:
+            raise ValueError("batch_invalid_sku")
+
+    rak_ids = {rak_id for _sku_id, rak_id, _qty in entries}
+    if rak_ids:
+        active_raks = set(db.scalars(
+            select(Rak.id)
+            .join(Area, Area.id == Rak.area_id)
+            .join(Gudang, Gudang.id == Area.gudang_id)
+            .where(Rak.is_active.is_(True), Area.is_active.is_(True),
+                   Gudang.is_active.is_(True))))
+        if not rak_ids <= active_raks:
+            raise ValueError("invalid_rak")
+
+    if mode == "out":
+        for sku_id, rak_id, qty in entries:
+            if qty <= 0:
+                continue
+            stock = db.scalar(select(Stock).where(
+                Stock.rak_id == rak_id, Stock.sku_id == sku_id))
+            if stock is None or stock.qty_boxes < qty:
+                raise ValueError("insufficient_stock")
+
+    changed = 0
+    try:
+        for sku_id, rak_id, qty in entries:
+            if mode == "in":
+                if qty == 0:
+                    continue
+                execute_masuk(db, actor, sku_id, rak_id, qty, reason, commit=False)
+                changed += 1
+            elif mode == "out":
+                if qty == 0:
+                    continue
+                execute_keluar(db, actor, sku_id, rak_id, qty, reason, commit=False)
+                changed += 1
+            else:
+                stock = db.scalar(select(Stock).where(
+                    Stock.rak_id == rak_id, Stock.sku_id == sku_id))
+                if (stock.qty_boxes if stock is not None else 0) == qty:
+                    continue
+                execute_adjust(db, actor, sku_id, rak_id, qty, reason, commit=False)
+                changed += 1
+        if changed:
+            db.commit()
+    except ValueError:
+        db.rollback()
+        raise
+    return changed
+
+
 def create_stock_request(db: DbSession, actor, type_: str, sku_id: int,
                          from_rak_id: int | None, to_rak_id: int | None,
                          qty: int, reason: str | None) -> StockRequest:

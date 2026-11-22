@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active = "stock" %}
+<h2>{{ _("stock.batch.title") }}</h2>
+{% include "partials/location_tabs.html" %}
+{% if msg %}<div class="alert {% if 'error' in msg %}alert-danger{% else %}alert-success{% endif %}">{{ _(msg) }}</div>{% endif %}
+
+<div class="card">
+  <form method="get" action="/manage/stock">
+    <label class="field">{{ _("stock.batch.select_skus") }}
+      <input name="q" value="{{ q }}" placeholder="{{ _('search.placeholder') }}">
+    </label>
+    {% if sku_options %}
+    <label class="field">{{ _("stock.batch.select_skus") }}
+      <select name="sku" multiple size="12">
+        {% for s in sku_options %}
+        <option value="{{ s.id }}" {% if s.id in selected_ids %}selected{% endif %}>{{ s.code }} — {{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% else %}
+    <p style="color: var(--muted); font-size: 0.9rem;">{{ _("stock.batch.no_skus") }}</p>
+    {% endif %}
+    <button class="btn btn-primary" type="submit">{{ _("stock.batch.show") }}</button>
+    <p style="color: var(--muted); font-size: 0.9rem;">{{ _("stock.batch.multi_hint") }}</p>
+  </form>
+</div>
+
+{% if selected_skus %}
+<div class="page-actions">
+  <a class="btn btn-outline" href="/manage/stock?export=xlsx{% for sid in selected_ids %}&amp;sku={{ sid }}{% endfor %}">⬇️ {{ _("common.export") }}</a>
+  <a class="btn btn-outline" href="/manage/stock">{{ _("stock.batch.finish") }}</a>
+</div>
+
+<form method="post" action="/manage/stock/batch">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="sel" value="{{ selected_ids|join(',') }}">
+  <input type="hidden" name="q" value="{{ q }}">
+  <div class="card">
+    <label class="field">{{ _("stock.batch.mode") }}
+      <select name="mode">
+        <option value="adjust" selected>{{ _("stock.batch.mode.adjust") }}</option>
+        <option value="in">{{ _("stock.batch.mode.in") }}</option>
+        <option value="out">{{ _("stock.batch.mode.out") }}</option>
+      </select>
+    </label>
+    <label class="field">{{ _("stock.reason") }}
+      <input name="reason" placeholder="{{ _('stock.reason.placeholder') }}">
+    </label>
+    <p style="color: var(--muted); font-size: 0.9rem;">{{ _("stock.batch.qty_hint") }}</p>
+  </div>
+
+  {% for s in selected_skus %}
+  <div class="card">
+    <h3>{{ s.code }} — {{ s.name }}</h3>
+    <table class="table">
+      <thead><tr><th>{{ _("stock.batch.rak") }}</th><th>{{ _("stock.batch.current") }}</th><th>{{ _("stock.qty") }}</th></tr></thead>
+      <tbody>
+        {% for p in placements[s.id] %}
+        <tr>
+          <td>{{ p.label }}</td>
+          <td>{{ p.qty }}</td>
+          <td><input type="number" min="0" step="1" name="qty_{{ s.id }}_{{ p.rak_id }}" placeholder="—"></td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td>
+            <select name="new_rak_{{ s.id }}">
+              <option value="">—</option>
+              {% for r in rak_options %}{% if r.id not in placed_ids[s.id] %}
+              <option value="{{ r.id }}">{{ r.label }}</option>
+              {% endif %}{% endfor %}
+            </select>
+          </td>
+          <td>—</td>
+          <td><input type="number" min="0" step="1" name="new_qty_{{ s.id }}" placeholder="—"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+  <div class="page-actions">
+    <button class="btn btn-primary" type="submit">{{ _("stock.batch.apply") }}</button>
+  </div>
+</form>
+{% else %}
+<div class="card">
+  <p>{{ _("stock.batch.empty_selection") }}</p>
+</div>
+{% endif %}
+{% endblock %}

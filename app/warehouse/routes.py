@@ -1,9 +1,11 @@
 """Warehouse routes: visual explorer (view) + management CRUD (manage)."""
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session as DbSession
 
 from app.auth.models import User
@@ -28,6 +30,56 @@ templates = get_templates()
 
 def _done(path: str, key: str) -> RedirectResponse:
     return RedirectResponse(f"{path}?msg={key}", status_code=302)
+
+
+def _stock_redirect(sel_ids: list[int], q: str, key: str) -> RedirectResponse:
+    params = [("sku", str(i)) for i in sel_ids]
+    if q:
+        params.append(("q", q))
+    params.append(("msg", key))
+    return RedirectResponse(f"/manage/stock?{urlencode(params)}", status_code=302)
+
+
+def _parse_batch_entries(f: dict) -> list[tuple[int, int, int]]:
+    entries: list[tuple[int, int, int]] = []
+    for key, raw in f.items():
+        if key.startswith("qty_"):
+            parts = key.split("_")
+            if len(parts) != 3:
+                raise ValueError("batch_qty_invalid")
+            try:
+                sku_id, rak_id = int(parts[1]), int(parts[2])
+            except ValueError:
+                raise ValueError("batch_qty_invalid") from None
+            text = (raw or "").strip()
+            if not text:
+                continue
+            try:
+                qty = int(text)
+            except ValueError:
+                raise ValueError("batch_qty_invalid") from None
+            entries.append((sku_id, rak_id, qty))
+        elif key.startswith("new_rak_"):
+            try:
+                sku_id = int(key.removeprefix("new_rak_"))
+            except ValueError:
+                raise ValueError("batch_qty_invalid") from None
+            rak_raw = (raw or "").strip()
+            qty_raw = (f.get(f"new_qty_{sku_id}") or "").strip()
+            if not rak_raw and not qty_raw:
+                continue
+            if not rak_raw:
+                raise ValueError("batch_rak_required")
+            if not qty_raw:
+                continue
+            try:
+                rak_id, qty = int(rak_raw), int(qty_raw)
+            except ValueError:
+                raise ValueError("batch_qty_invalid") from None
+            if qty == 0:
+                continue
+            entries.append((sku_id, rak_id, qty))
+    return entries
 
 
 def _crumbs(request, *pairs) -> list[tuple[str, str]]:
@@ -409,6 +461,127 @@ def skus_import_confirm(request: Request,
     count = commit_import(db, preview.valid, user)
     discard_upload(token)
     return _done("/manage/skus", "import.success" if count else "import.nothing_to_import")
+
+
+# ================= BATCH STOCK (warehouse.manage) =================
+
+@router.get("/manage/stock", response_class=HTMLResponse)
+def manage_stock(request: Request, user: User = Depends(require_perm("warehouse.manage")),
+                 db: DbSession = Depends(get_db), msg: str | None = None):
+    selected_ids: list[int] = []
+    for raw in request.query_params.getlist("sku"):
+        try:
+            sid = int(raw)
+        except ValueError:
+            continue
+        if sid not in selected_ids:
+            selected_ids.append(sid)
+    q = request.query_params.get("q", "").strip()
+
+    rak_rows = db.execute(
+        select(Rak.id, Rak.name, Area.name, Gudang.name)
+        .join(Area, Area.id == Rak.area_id)
+        .join(Gudang, Gudang.id == Area.gudang_id)
+        .where(Rak.is_active.is_(True), Area.is_active.is_(True),
+               Gudang.is_active.is_(True))
+        .order_by(Gudang.name, Area.sort_order, Area.name,
+                  Rak.sort_order, Rak.name)
+    ).all()
+    rak_options = [{"id": rid, "label": f"{gname} / {aname} / {rname}"}
+                   for rid, rname, aname, gname in rak_rows]
+
+    picker_stmt = select(Sku).where(Sku.is_active.is_(True))
+    picker_conditions = []
+    if q:
+        like = f"%{q}%"
+        picker_conditions.append(or_(Sku.code.ilike(like), Sku.name.ilike(like)))
+    if selected_ids:
+        picker_conditions.append(Sku.id.in_(selected_ids))
+    if picker_conditions:
+        picker_stmt = picker_stmt.where(or_(*picker_conditions))
+    sku_options = list(db.scalars(picker_stmt.order_by(Sku.code)))
+    selected_skus = [s for s in sku_options if s.id in selected_ids]
+
+    if request.query_params.get("export") == "xlsx":
+        export_stmt = (
+            select(Stock.qty_boxes, Sku.code, Sku.name, Rak.name, Area.name, Gudang.name)
+            .join(Sku, Sku.id == Stock.sku_id)
+            .join(Rak, Rak.id == Stock.rak_id)
+            .join(Area, Area.id == Rak.area_id)
+            .join(Gudang, Gudang.id == Area.gudang_id)
+            .where(Stock.qty_boxes > 0)
+            .order_by(Gudang.name, Area.sort_order, Area.name,
+                      Rak.sort_order, Rak.name, Sku.code)
+        )
+        if selected_skus:
+            export_stmt = export_stmt.where(
+                Stock.sku_id.in_([s.id for s in selected_skus]))
+        rows = [{"Gudang": gname, "Area": aname, "Rak": rname,
+                 "Kode": code, "Nama": name, "Stok": qty}
+                for qty, code, name, rname, aname, gname in db.execute(export_stmt)]
+        return export_xlsx(rows, ["Gudang", "Area", "Rak", "Kode", "Nama", "Stok"],
+                           "stock.xlsx")
+
+    placements: dict[int, list[dict]] = {s.id: [] for s in selected_skus}
+    placed_ids: dict[int, set[int]] = {s.id: set() for s in selected_skus}
+    if selected_skus:
+        placement_rows = db.execute(
+            select(Stock.sku_id, Stock.rak_id, Stock.qty_boxes,
+                   Rak.name, Area.name, Gudang.name)
+            .join(Rak, Rak.id == Stock.rak_id)
+            .join(Area, Area.id == Rak.area_id)
+            .join(Gudang, Gudang.id == Area.gudang_id)
+            .where(Stock.qty_boxes > 0,
+                   Stock.sku_id.in_([s.id for s in selected_skus]),
+                   Rak.is_active.is_(True), Area.is_active.is_(True),
+                   Gudang.is_active.is_(True))
+            .order_by(Gudang.name, Area.sort_order, Area.name,
+                      Rak.sort_order, Rak.name)
+        ).all()
+        for sku_id, rak_id, qty, rname, aname, gname in placement_rows:
+            placements[sku_id].append({
+                "rak_id": rak_id,
+                "label": f"{gname} / {aname} / {rname}",
+                "qty": qty,
+            })
+            placed_ids[sku_id].add(rak_id)
+
+    return templates.TemplateResponse(request, "warehouse/manage_stock.html", {
+        "msg": msg, "q": q, "sku_options": sku_options,
+        "selected_ids": selected_ids, "selected_skus": selected_skus,
+        "rak_options": rak_options, "placements": placements,
+        "placed_ids": placed_ids,
+    })
+
+
+@router.post("/manage/stock/batch")
+def manage_stock_batch(request: Request,
+                       user: User = Depends(require_perm("warehouse.manage")),
+                       db: DbSession = Depends(get_db)):
+    f = request.state.form_cache
+    sel_ids: list[int] = []
+    for raw in (f.get("sel") or "").split(","):
+        try:
+            sid = int(raw.strip())
+        except ValueError:
+            continue
+        if sid not in sel_ids:
+            sel_ids.append(sid)
+    q = (f.get("q") or "").strip()
+    mode = f.get("mode", "")
+    reason = (f.get("reason") or "").strip() or None
+    try:
+        entries = _parse_batch_entries(f)
+    except ValueError as e:
+        return _stock_redirect(sel_ids, q, f"stock.error.{e.args[0]}")
+    if not entries:
+        return _stock_redirect(sel_ids, q, "stock.batch.nochange")
+    try:
+        changed = services.batch_apply_stock(db, user, mode, entries, reason)
+    except ValueError as e:
+        return _stock_redirect(sel_ids, q, f"stock.error.{e.args[0]}")
+    return _stock_redirect(sel_ids, q,
+                           "stock.executed" if changed > 0 else "stock.batch.nochange")
 
 
 # ================= STOCK OPERATIONS =================
